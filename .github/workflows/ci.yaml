@@ -1,0 +1,90 @@
+---
+name: CI
+
+on:
+  # Scan on-demand through GitHub Actions interface:
+  workflow_dispatch: {}
+  # Scan workflow call:
+  workflow_call:
+  # Scan mainline branches and report all findings:
+  push:
+    branches: ["master", "main"]
+  # Scan changed files in PRs (diff-aware scanning):
+  pull_request:
+    branches: ["master", "main"]
+
+# Don't grant any access by default
+permissions: {}
+
+env:
+  target_ref: ${{ github.head_ref || github.ref_name }}
+  AWS_REGION: us-west-2
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.12"
+          - "3.13"
+
+    name: ci with python ${{ matrix.python-version }}
+
+    ############################################
+    # Grant status permission for MULTI_STATUS #
+    ############################################
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: actions/checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          repository: ${{ github.repository }}
+          # ref: ${{ env.target_ref }}
+          token: ${{ github.token }}
+          persist-credentials: false  # otherwise, the token used is the GITHUB_TOKEN, instead of your
+          #                             personal access token.
+          fetch-depth: 0
+
+      - name: actions/setup-python
+        uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: '3.12'
+
+      - name: Report Python version, update PIP, and install Poetry
+        shell: bash
+        run: |
+          set -x
+          python --version
+          python -m pip install --upgrade pip
+          pip --version
+          pip install poetry --verbose
+          poetry install
+          poetry --version
+          poetry config --list
+
+      - name: Run tests and generate coverage report
+        shell: bash
+        run: |
+          set -x
+          make cover
+
+      # Upload generated artifacts for historical reference
+      - name: actions/upload-artifact
+        id: artifact-upload-step
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: test-reports
+          path: ./coverage.*
+          retention-days: 180
+
+      - name: Show Artifact ID
+        shell: bash
+        run: |
+          echo 'Artifact ID is ${{ steps.artifact-upload-step.outputs.artifact-id }}'
