@@ -18,7 +18,7 @@ index-url = https://[USERNAME]@godaddy.com:[PyPI-TOKEN]@gdartifactory1.jfrog.io/
 
 ### Poetry Setup
 ```bash
-# verify you are on the expected version of Python, currently 3.10
+# verify you are on the expected version of Python, currently 3.13
 python --version
 
 # update pip
@@ -60,11 +60,17 @@ poetry add python gd-auth-sso gd-auth
 # Add dev dependancies
 poetry add --group dev  black flake8 pylint pytest pytest-spec pytest-cov
 
-# Update
+# Update poetry lock file
 poetry update
 
 # poetry.lock
 poetry lock
+
+# Update app minor version
+poetry version minor
+
+# Update app major version
+poetry version major
 ```
 
 ### Using make to check your code changes before you check it in GitHub

@@ -100,16 +100,12 @@ cover: clean lint
 publish: clean
 	poetry publish --build -vvv --repository="${REPO_NAME}" --username="${REPO_UID}" --password="${REPO_PWD}"
 
-.PHONY: ldaper
-ldaper: clean init clear-cache update-requirements lint tests cover
-	python ./src/ldaper/ldaper.py
-
-.PHONY: get_password
-get_password: clean init clear-cache update-requirements lint tests cover
-	python ./src/auth/get_password.py
+.PHONY: scan
+scan: clean init clear-cache update-requirements lint tests cover
+	python ./scan_for_sc_parent_stack/src/scan_for_sc_parent_stack.py
 
 .PHONY: all
-all: clean init clear-cache update-requirements lint tests cover
+all: clean init clear-cache update-requirements lint tests cover run
 
 .PHONY: usage
 usage:
