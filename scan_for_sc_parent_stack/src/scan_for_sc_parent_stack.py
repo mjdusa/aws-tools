@@ -1,6 +1,7 @@
 import re
 import sys
 import boto3
+import json
 
 
 def main(show_details = False):
@@ -33,9 +34,7 @@ def main(show_details = False):
     print("")
 
     if show_details:
-        print(f"Scanning Regions: {regions}")
-
-        print("")
+        jdump("Scanning Regions:", regions)
 
     for region in regions:
         print(f"Region: {region}")
@@ -68,6 +67,14 @@ def main(show_details = False):
         print("")
         print("")
 
+def jdump(header, object, indent=2):
+    formatted_object = json.dumps(object, indent=indent, sort_keys=True, default=str)  # overcome "TypeError: Object of type datetime is not JSON serializable"
+
+    print(header)
+
+    print(formatted_object)
+
+    print("")
 
 def search_region_for_sc_parent_stacks(region, show_details = False):
     cloudformation = boto3.client("cloudformation", region_name=region)
@@ -81,6 +88,7 @@ def search_region_for_sc_parent_stacks(region, show_details = False):
         for stack in page["StackSummaries"]:
             if stack["StackStatus"] not in ["DELETE_COMPLETE"]:
                 stacks.append(stack)
+            
 
     sc_stacks = [s["StackName"] for s in stacks if s["StackName"].startswith("SC-")]
     non_sc_stacks = [s["StackName"] for s in stacks if not s["StackName"].startswith("SC-")]
@@ -92,23 +100,23 @@ def search_region_for_sc_parent_stacks(region, show_details = False):
 
     for stack in non_sc_stacks:
         if show_details:
-            print(f"-- stack: {stack}")
+            jdump("-- stack:", stack)
 
         paginator = cloudformation.get_paginator("list_stack_resources")
         pages = paginator.paginate(StackName=stack)
 
         for page in pages:
             if show_details:
-                print(f"--- page: {page}")
+                jdump("--- page:", page)
 
             for resource in page["StackResourceSummaries"]:
                 if show_details:
-                    print(f"---- resource: {resource}")
+                    jdump("---- resource:", resource)
 
-                ogical_resource_id = resource.get("LogicalResourceId")
+                # logical_resource_id = resource.get("LogicalResourceId")
                 physical_resource_id = resource.get("PhysicalResourceId")
                 resource_type = resource.get("ResourceType")
-                last_updated_timestamp =resource.get("LastUpdatedTimestamp")
+                # last_updated_timestamp =resource.get("LastUpdatedTimestamp")
 
                 if resource_type == "AWS::ServiceCatalog::CloudFormationProvisionedProduct":
                     pp_id_parent_stack_mapping[physical_resource_id] = stack
@@ -122,7 +130,7 @@ def search_region_for_sc_parent_stacks(region, show_details = False):
 
     for stack in sc_stacks:
         if show_details:
-            print(f"-- stack: {stack}")
+            jdump("-- stack:", stack)
 
         match = expr.match(stack)
 
