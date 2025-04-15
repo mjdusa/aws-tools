@@ -3,7 +3,7 @@ import sys
 import boto3
 
 
-def main():
+def main(show_details = False):
     ec2 = boto3.client("ec2", region_name="us-west-2")
 
     all_regions = [r["RegionName"] for r in ec2.describe_regions(AllRegions=False)["Regions"]]
@@ -17,16 +17,35 @@ def main():
 
     resp = sts.get_caller_identity()
 
-    account_id = resp["Account"]
-    print(f"Account ID: {account_id}")
     print("")
 
+    if show_details:
+        user_id = resp["UserId"]
+        print(f"User ID: {user_id}")
+
+    account_id = resp["Account"]
+    print(f"Account ID: {account_id}")
+
+    if show_details:
+        arn = resp["Arn"]
+        print(f"Arn: {arn}")
+
+    print("")
+
+    if show_details:
+        print(f"Scanning Regions: {regions}")
+
+        print("")
+
     for region in regions:
-        results = search_region_for_sc_parent_stacks(region)
+        print(f"Region: {region}")
+
+        results = search_region_for_sc_parent_stacks(region, show_details)
 
         if not results:
-            print("No stacks found")
+            print("- No stacks found")
             print("")
+
             continue
 
         product_stack_width = len("Product Stack")
@@ -47,18 +66,15 @@ def main():
             print(fmt.format(product_stack, parent_stack or "(none)"))
 
         print("")
+        print("")
 
 
-def search_region_for_sc_parent_stacks(region):
-    print(f"Region: {region}")
-    print("")
-
+def search_region_for_sc_parent_stacks(region, show_details = False):
     cloudformation = boto3.client("cloudformation", region_name=region)
 
     stacks = []
 
     paginator = cloudformation.get_paginator("list_stacks")
-
     pages = paginator.paginate()
 
     for page in pages:
@@ -71,11 +87,20 @@ def search_region_for_sc_parent_stacks(region):
 
     pp_id_parent_stack_mapping = {}
 
+    if show_details:
+        print("- non SC Stacks:")
+
     for stack in non_sc_stacks:
+        if show_details:
+            print(f"-- {stack}")
+
         paginator = cloudformation.get_paginator("list_stack_resources")
         pages = paginator.paginate(StackName=stack)
         for page in pages:
             for resource in page["StackResourceSummaries"]:
+                if show_details:
+                    print(f"--- {resource}")
+
                 if resource["ResourceType"] == "AWS::ServiceCatalog::CloudFormationProvisionedProduct":
                     pp_id_parent_stack_mapping[resource.get("PhysicalResourceId")] = stack
 
@@ -83,7 +108,13 @@ def search_region_for_sc_parent_stacks(region):
 
     expr = re.compile(r'SC-\w+-(pp-\w+).*')
 
+    if show_details:
+        print("- SC Stacks:")
+
     for stack in sc_stacks:
+        if show_details:
+            print(f"-- {stack}")
+
         match = expr.match(stack)
 
         if not match:
@@ -105,4 +136,4 @@ def search_region_for_sc_parent_stacks(region):
 
 
 if __name__ == "__main__":
-    main()
+    main(True)
