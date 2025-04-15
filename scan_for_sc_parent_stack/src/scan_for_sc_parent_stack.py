@@ -92,17 +92,26 @@ def search_region_for_sc_parent_stacks(region, show_details = False):
 
     for stack in non_sc_stacks:
         if show_details:
-            print(f"-- {stack}")
+            print(f"-- stack: {stack}")
 
         paginator = cloudformation.get_paginator("list_stack_resources")
         pages = paginator.paginate(StackName=stack)
+
         for page in pages:
+            if show_details:
+                print(f"--- page: {page}")
+
             for resource in page["StackResourceSummaries"]:
                 if show_details:
-                    print(f"--- {resource}")
+                    print(f"---- resource: {resource}")
 
-                if resource["ResourceType"] == "AWS::ServiceCatalog::CloudFormationProvisionedProduct":
-                    pp_id_parent_stack_mapping[resource.get("PhysicalResourceId")] = stack
+                ogical_resource_id = resource.get("LogicalResourceId")
+                physical_resource_id = resource.get("PhysicalResourceId")
+                resource_type = resource.get("ResourceType")
+                last_updated_timestamp =resource.get("LastUpdatedTimestamp")
+
+                if resource_type == "AWS::ServiceCatalog::CloudFormationProvisionedProduct":
+                    pp_id_parent_stack_mapping[physical_resource_id] = stack
 
     product_stack_pp_id_mapping = {}
 
@@ -113,7 +122,7 @@ def search_region_for_sc_parent_stacks(region, show_details = False):
 
     for stack in sc_stacks:
         if show_details:
-            print(f"-- {stack}")
+            print(f"-- stack: {stack}")
 
         match = expr.match(stack)
 
