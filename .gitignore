@@ -136,6 +136,9 @@ venv.bak/
 # build
 build/
 
+# logs
+logs/
+
 # Spyder project settings
 .spyderproject
 .spyproject
